@@ -1,0 +1,42 @@
+{
+  "name": "dsh-session-tts",
+  "version": "2.4.0",
+  "description": "Read DSH session replies aloud with Microsoft Edge neural voices — female Mandarin voice picker, tone presets and automatic per-sentence tone detection, zero API key.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "tts",
+    "text-to-speech",
+    "read-aloud",
+    "edge-tts",
+    "mandarin"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md"
+  ],
+  "dependencies": {
+    "msedge-tts": "2.1.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  }
+}
