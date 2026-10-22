@@ -12,7 +12,7 @@
 | 依赖 | 纯 JS，**零原生模块** |
 | 音色 | 中文**普通话女声** 2 个 |
 | 语气 | 5 档预设 + **自动按句判断** |
-| 平台 | 桌面 DSH / Android DSH（DSHAPP） |
+| 平台 | 桌面 DSH ✅ / Android DSH ✅ 均实测可用 |
 
 ---
 
@@ -79,7 +79,7 @@ TTS 模型本身不读情绪——它只照着文字念。所以这个插件自�
 插件管理器里安装，或命令行：
 
 ```sh
-dsh plugin --profile desktop add github:<你的用户名>/dsh-session-tts
+dsh plugin --profile desktop add github:jingyunex/dsh-session-tts
 ```
 
 装完重启 DSH。
@@ -89,12 +89,27 @@ dsh plugin --profile desktop add github:<你的用户名>/dsh-session-tts
 在「插件 → 添加插件」里，安装源选**自定义地址**，填：
 
 ```
-https://github.com/<你的用户名>/dsh-session-tts
+https://github.com/jingyunex/dsh-session-tts
 ```
 
 依赖 `msedge-tts` 会由 pnpm 自动安装。
 
 > Android 上首次播放需要**先点一下页面**——移动浏览器和 WebView 默认禁止自动播放声音，插件已内置手势解锁。
+
+### ✅ 已验证环境
+
+| 环境 | 结果 |
+|---|---|
+| DSH 0.2.1-rc.2 + Windows（桌面端） | ✅ 安装、朗读、自动语气全部正常 |
+| **DSH 0.3.0（`com.dsh.android`，Android）** | ✅ **通过插件管理器从本仓库安装成功，可正常朗读** |
+
+Android 端已验证的关键点：
+
+- 从 GitHub 地址安装，`msedge-tts` 依赖自动拉取
+- 零原生模块，Android 上无编译/加载问题
+- WebView 内 MP3 播放正常，手势解锁生效
+
+> 说明：Android 端的 DSH 是把引擎跑在手机本机（`127.0.0.1`），不需要电脑参与，也不涉及局域网穿透。
 
 ---
 
