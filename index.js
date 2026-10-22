@@ -36,15 +36,16 @@ const DEFAULTS = () => ({
 // ---------------------------------------------------------------------------
 // Automatic tone
 // The TTS model does not read emotion, so a cheap classifier decides how each
-// sentence should be delivered, and those decisions become prosody offsets.
+// sentence should be delivered. Only the speaking RATE changes — pitch stays at
+// whatever the user configured, so the voice keeps a steady character.
 // ---------------------------------------------------------------------------
 const TONE_PROSODY = {
-  natural: { rate: 1.0, pitch: 0 },
-  gentle: { rate: 0.94, pitch: -6 },
-  serious: { rate: 1.0, pitch: -12 },
-  lively: { rate: 1.08, pitch: 12 },
-  low: { rate: 0.9, pitch: -18 },
-  question: { rate: 1.02, pitch: 6 },
+  natural: { rate: 1.0 },
+  gentle: { rate: 0.94 },
+  serious: { rate: 0.95 },
+  lively: { rate: 1.08 },
+  low: { rate: 0.9 },
+  question: { rate: 1.02 },
 }
 
 const WORD_CUES = [
@@ -65,6 +66,49 @@ function classifySentence(sentence) {
   if (/(…|\.\.\.|~)/.test(text)) return 'low'
   if (/[?？]\s*$/.test(text)) return 'question'
   return 'natural'
+}
+
+// ---------------------------------------------------------------------------
+// Text cleanup
+// Emoji, arrows, geometric shapes, box drawing, keycaps and markdown scaffolding
+// are not words. Edge either skips them or emits a stray click/pause, so strip
+// them before synthesis. Real punctuation and CJK text are preserved.
+// ---------------------------------------------------------------------------
+const SYMBOL_RE =
+  /[\u{1F000}-\u{1FAFF}\u{2190}-\u{21FF}\u{2300}-\u{23FF}\u{2460}-\u{24FF}\u{2500}-\u{259F}\u{25A0}-\u{25FF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{2122}\u{00A9}\u{00AE}\u{FFFD}]/gu
+
+function sanitizeForSpeech(raw) {
+  let text = String(raw == null ? '' : raw)
+
+  // Fenced code: keep the words inside, drop the fences and language tag.
+  text = text.replace(/```[A-Za-z0-9+#._-]*/g, ' ').replace(/```/g, ' ')
+  // Inline code and emphasis markers.
+  text = text.replace(/`/g, '').replace(/\*\*|__/g, '').replace(/\*/g, '')
+  // Heading markers and blockquote markers.
+  text = text.replace(/^\s{0,3}#{1,6}\s+/gm, '').replace(/^\s{0,3}>\s?/gm, '')
+  // Table separator rows and horizontal rules (before pipes are collapsed).
+  text = text.replace(/^[\s|:-]{3,}$/gm, ' ')
+  text = text.replace(/\|/g, ' ')
+  // List bullets.
+  text = text.replace(/^\s*[-*+]\s+/gm, '')
+  // Images and links: keep the readable label only.
+  text = text.replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+  text = text.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+  // Decorative glyphs: emoji, arrows, shapes, dingbats, keycaps, variation selectors.
+  text = text.replace(SYMBOL_RE, ' ')
+  // Residual decoration characters that carry no spoken value.
+  text = text.replace(/[~^\\]/g, ' ')
+
+  // Collapse the gaps the removals left behind.
+  text = text.replace(/[\u3000\t ]{2,}/g, ' ')
+  text = text.replace(/[ \t]+\n/g, '\n')
+  text = text.replace(/\n[ \t]+/g, '\n')
+  text = text.replace(/\n{2,}/g, '\n')
+  text = text.replace(/([，、；：])\1+/g, '$1')
+  text = text.replace(/([！？!?])\1+/g, '$1')
+  text = text.replace(/^[\s，、；：。！？,.!?;:]+/, '')
+  text = text.replace(/[\s，、；：]+$/, '')
+  return text.trim()
 }
 
 // Split keeping the terminator, so prosody is not chopped mid-thought.
@@ -119,7 +163,8 @@ function planTones(text, baseRate, basePitch, maxGroups = 6) {
       tone: group.tone,
       text: group.text,
       rate: Math.min(2, Math.max(0.5, baseRate * prosody.rate)),
-      pitch: Math.min(50, Math.max(-50, basePitch + prosody.pitch)),
+      // 自动语气只改语速，音高保持用户设定的基准不变
+      pitch: basePitch,
     }
   })
 }
@@ -359,8 +404,10 @@ export function apply(ctx) {
   const synthesize = async (rawText, overrides = {}) => {
     const text = String(rawText == null ? '' : rawText).trim()
     if (!text) throw new Error('empty text')
+    const cleaned = sanitizeForSpeech(text)
+    if (!cleaned) throw new Error('nothing readable after removing symbols')
     const limit = Number(overrides.maxChars) > 0 ? Number(overrides.maxChars) : settings.maxChars
-    const clipped = limit > 0 ? text.slice(0, limit) : text
+    const clipped = limit > 0 ? cleaned.slice(0, limit) : cleaned
     const rate = Number(overrides.rate) > 0 ? Number(overrides.rate) : settings.rate
     const pitch = Number.isFinite(Number(overrides.pitch)) ? Number(overrides.pitch) : settings.pitch
     const voice = overrides.voice || settings.edgeVoice

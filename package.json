@@ -1,7 +1,7 @@
 {
   "name": "dsh-session-tts",
-  "version": "2.4.0",
-  "description": "Read DSH session replies aloud with Microsoft Edge neural voices — female Mandarin voice picker, tone presets and automatic per-sentence tone detection, zero API key.",
+  "version": "2.5.0",
+  "description": "Read DSH session replies aloud with Microsoft Edge neural voices — female Mandarin voice picker, tone presets, automatic per-sentence rate detection, and symbol/emoji cleanup. Zero API key.",
   "type": "module",
   "license": "MIT",
   "keywords": [
