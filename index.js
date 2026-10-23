@@ -5,6 +5,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { synthesize, listVoices } from './lib/edge-tts.js'
 
 export const name = 'dsh-session-tts'
 
@@ -214,33 +215,16 @@ function saveSettings(next) {
 }
 
 // ---------------------------------------------------------------------------
-// Edge (online) engine — the same Microsoft Read Aloud channel the Harness
-// itself uses. edge-tts-universal hangs on this network; msedge-tts connects.
+// Edge (online) engine
+// The client is owned by this plugin (lib/edge-tts.js) because the public
+// handshake changes often and third-party wrappers lag behind it.
 // ---------------------------------------------------------------------------
-let edgeSdk = null
-async function msedge() {
-  if (!edgeSdk) {
-    const mod = await import('msedge-tts')
-    edgeSdk = mod.default ?? mod
-  }
-  return edgeSdk
-}
-
 async function edgeSynth(text, voiceId, rate, pitchHz) {
-  const sdk = await msedge()
-  const tts = new sdk.MsEdgeTTS({ connectionTimeoutMs: 15000, synthesisTimeoutMs: 45000 })
-  await tts.setMetadata(voiceId, sdk.OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3)
-  const hz = Math.round(Number(pitchHz) || 0)
-  const pitch = (hz >= 0 ? '+' : '') + hz + 'Hz'
-  const { audioStream } = tts.toStream(text, { rate: Number(rate) || 1, pitch })
-  const chunks = []
-  await new Promise((resolve, reject) => {
-    audioStream.on('data', (chunk) => chunks.push(Buffer.from(chunk)))
-    audioStream.on('close', resolve)
-    audioStream.on('end', resolve)
-    audioStream.on('error', reject)
+  const buffer = await synthesize(String(text), voiceId, {
+    rate: Number(rate) || 1,
+    pitch: Number(pitchHz) || 0,
+    timeoutMs: 45000,
   })
-  const buffer = Buffer.concat(chunks)
   if (!buffer.length) throw new Error('edge returned no audio')
   return { buffer, mime: 'audio/mpeg' }
 }
@@ -286,10 +270,8 @@ let cachedEdgeVoices = null
 async function edgeVoices() {
   if (cachedEdgeVoices) return cachedEdgeVoices
   try {
-    const sdk = await msedge()
-    const tts = new sdk.MsEdgeTTS()
-    const list = await tts.getVoices()
-    const mapped = (Array.isArray(list) ? list : [])
+    const list = await listVoices()
+    const mapped = list
       .map((v) => {
         const id = String(v.ShortName || '')
         const locale = String(v.Locale || '')

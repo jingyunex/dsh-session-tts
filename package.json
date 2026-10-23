@@ -1,7 +1,7 @@
 {
   "name": "dsh-session-tts",
-  "version": "2.5.0",
-  "description": "Read DSH session replies aloud with Microsoft Edge neural voices — female Mandarin voice picker, tone presets, automatic per-sentence rate detection, and symbol/emoji cleanup. Zero API key.",
+  "version": "2.6.0",
+  "description": "Read DSH session replies aloud with Microsoft Edge neural voices — female Mandarin voice picker, tone presets, automatic per-sentence rate detection, and symbol/emoji cleanup. Ships its own Edge TTS client, zero API key.",
   "type": "module",
   "license": "MIT",
   "keywords": [
@@ -23,12 +23,13 @@
     "index.js",
     "client.js",
     "cordis.patch.yml",
+    "lib/edge-tts.js",
     "locale/*.json",
     "icon.svg",
     "README.md"
   ],
   "dependencies": {
-    "msedge-tts": "2.1.0"
+    "ws": "8.22.0"
   },
   "dsh": {
     "bundle": {
